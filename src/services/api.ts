@@ -1,0 +1,199 @@
+import {
+  User,
+  Student,
+  Faculty,
+  CourseOffering,
+  Registration,
+  Notification,
+  EnrolledStudent,
+  GradeLetter,
+} from '../types';
+
+const rawBase = (import.meta as any).env?.VITE_API_URL || '';
+const API_BASE = rawBase
+  ? (rawBase.endsWith('/api') ? rawBase : `${rawBase.replace(/\/$/, '')}/api`)
+  : '/api';
+
+function getAuthHeaders(): HeadersInit {
+  const token = localStorage.getItem('iitm_ams_token');
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+}
+
+async function handleResponse<T>(response: Response): Promise<T> {
+  const data = await response.json();
+  if (!response.ok || !data.success) {
+    const errorMsg = data.message || data.error || `HTTP Error ${response.status}`;
+    throw new Error(errorMsg);
+  }
+  return data.data;
+}
+
+export const apiService = {
+  // Auth
+  login: async (email: string, password: string) => {
+    const res = await fetch(`${API_BASE}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || 'Login failed');
+    }
+    return data.data as { token: string; user: User };
+  },
+
+  register: async (payload: any) => {
+    const res = await fetch(`${API_BASE}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || 'Registration failed');
+    }
+    return data.data as { token: string; user: User };
+  },
+
+  getCurrentUser: async () => {
+    const res = await fetch(`${API_BASE}/auth/me`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse<{ user: User; student?: Student; faculty?: Faculty }>(res);
+  },
+
+  resetSeedData: async () => {
+    const res = await fetch(`${API_BASE}/admin/reset-seed`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse<{ message: string }>(res);
+  },
+
+  // Student Endpoints
+  getStudentProfile: async () => {
+    const res = await fetch(`${API_BASE}/student/profile`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse<Student>(res);
+  },
+
+  getAvailableCourses: async () => {
+    const res = await fetch(`${API_BASE}/student/courses`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse<{ activeSemester: any; offerings: CourseOffering[] }>(res);
+  },
+
+  getStudentRegistrations: async () => {
+    const res = await fetch(`${API_BASE}/student/registrations`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse<Registration[]>(res);
+  },
+
+  registerCourse: async (course_offering_id: string) => {
+    const res = await fetch(`${API_BASE}/student/registrations`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ course_offering_id }),
+    });
+    return handleResponse<Registration>(res);
+  },
+
+  dropCourse: async (registration_id: string) => {
+    const res = await fetch(`${API_BASE}/student/registrations/${registration_id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse<void>(res);
+  },
+
+  getStudentGrades: async () => {
+    const res = await fetch(`${API_BASE}/student/grades`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse<{
+      cgpa: number;
+      total_credits_earned: number;
+      grades: Array<{
+        registration_id: string;
+        course_code: string;
+        course_name: string;
+        credits: number;
+        semester_name: string;
+        grade: GradeLetter;
+        grade_point: number;
+        published_at: string;
+      }>;
+    }>(res);
+  },
+
+  getStudentNotifications: async () => {
+    const res = await fetch(`${API_BASE}/student/notifications`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse<Notification[]>(res);
+  },
+
+  markNotificationRead: async (notifId: string) => {
+    const res = await fetch(`${API_BASE}/student/notifications/${notifId}/read`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse<void>(res);
+  },
+
+  // Faculty Endpoints
+  getFacultyProfile: async () => {
+    const res = await fetch(`${API_BASE}/faculty/profile`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse<Faculty>(res);
+  },
+
+  getFacultyAssignedCourses: async () => {
+    const res = await fetch(`${API_BASE}/faculty/courses`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse<CourseOffering[]>(res);
+  },
+
+  getEnrolledStudents: async (offeringId: string) => {
+    const res = await fetch(`${API_BASE}/faculty/courses/${offeringId}/students`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse<{ offering: CourseOffering; students: EnrolledStudent[] }>(res);
+  },
+
+  uploadGrade: async (offeringId: string, registrationId: string, grade: GradeLetter) => {
+    const res = await fetch(`${API_BASE}/faculty/courses/${offeringId}/grades`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ registration_id: registrationId, grade }),
+    });
+    return handleResponse<any>(res);
+  },
+
+  publishGrades: async (offeringId: string) => {
+    const res = await fetch(`${API_BASE}/faculty/courses/${offeringId}/publish-grades`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse<{ published_count: number; emails_dispatched: number; timestamp: string }>(res);
+  },
+
+  getFacultyNotifications: async () => {
+    const res = await fetch(`${API_BASE}/faculty/notifications`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse<Notification[]>(res);
+  },
+};

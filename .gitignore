@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Build outputs & compiled binaries
+build/
+dist/
+bin/
+backend/bin/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Local runtime data & logs
+data/*.json
+coverage/
+*.log
+.DS_Store
+
+# Environment configuration & secrets
+.env
+.env.*
+!.env.example
+!backend/.env.example
+

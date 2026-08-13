@@ -1,0 +1,13 @@
+# Docker build ignore list
+.env
+.env.*
+!.env.example
+bin/
+/server
+*.exe
+*.dll
+*.so
+*.dylib
+*.log
+.git
+.DS_Store
