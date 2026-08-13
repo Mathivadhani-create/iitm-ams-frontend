@@ -1,0 +1,13 @@
+# Go compiled binaries
+bin/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Environment variables & secrets
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
