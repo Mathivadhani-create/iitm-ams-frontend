@@ -1,0 +1,6 @@
+{
+  "name": "IIT Madras Academic Management System",
+  "description": "Production-ready Academic Management System for IIT Madras featuring secure authentication, course registration, grade management, publication workflows, and role-based access control.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

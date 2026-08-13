@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: iitm-ams-backend
+    env: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    envVars:
+      - key: PORT
+        value: 8080
+      - key: DATABASE_URL
+        fromDatabase:
+          name: iitm-ams-postgres
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRATION_HOURS
+        value: 24
+      - key: CORS_ORIGIN
+        value: "*"
+      - key: ENABLE_EMAIL
+        value: "false"
+
+databases:
+  - name: iitm-ams-postgres
+    plan: free
+    databaseName: iitm_ams
+    user: iitm_admin
