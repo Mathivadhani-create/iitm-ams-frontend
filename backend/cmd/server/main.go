@@ -80,6 +80,13 @@ func main() {
 	// IMPORTANT: actually apply the CORS middleware.
 	r.Use(corsMiddleware)
 
+	// Explicitly handle all CORS preflight requests.
+	r.PathPrefix("/").Methods(http.MethodOptions).HandlerFunc(
+		func(w http.ResponseWriter, req *http.Request) {
+			w.WriteHeader(http.StatusNoContent)
+		},
+	)
+
 	// ============================================================
 	// HEALTH CHECK
 	// ============================================================
