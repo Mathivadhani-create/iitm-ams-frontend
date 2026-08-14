@@ -29,6 +29,7 @@ func main() {
 		log.Fatalf("[FATAL] Failed to connect to PostgreSQL database: %v", err)
 	}
 	defer dbConn.Close()
+
 	log.Println("[Go Server] Connected to PostgreSQL database successfully.")
 
 	st := store.NewStore(dbConn.Conn)
@@ -41,76 +42,215 @@ func main() {
 
 	r := mux.NewRouter()
 
-	// Global CORS Middleware
-	r.Use(func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Access-Control-Allow-Origin", cfg.CORSOrigin)
-			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-			if r.Method == "OPTIONS" {
-				w.WriteHeader(http.StatusOK)
+	// ============================================================
+	// GLOBAL CORS MIDDLEWARE
+	// ============================================================
+	corsMiddleware := func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			origin := req.Header.Get("Origin")
+
+			// Allow the configured frontend origin.
+			if cfg.CORSOrigin == "*" {
+				w.Header().Set("Access-Control-Allow-Origin", "*")
+			} else if origin == cfg.CORSOrigin {
+				w.Header().Set("Access-Control-Allow-Origin", origin)
+			}
+
+			w.Header().Set("Vary", "Origin")
+			w.Header().Set(
+				"Access-Control-Allow-Methods",
+				"GET, POST, PUT, PATCH, DELETE, OPTIONS",
+			)
+			w.Header().Set(
+				"Access-Control-Allow-Headers",
+				"Content-Type, Authorization",
+			)
+			w.Header().Set("Access-Control-Max-Age", "86400")
+
+			// Handle CORS preflight before Gorilla Mux routing.
+			if req.Method == http.MethodOptions {
+				w.WriteHeader(http.StatusNoContent)
 				return
 			}
-			next.ServeHTTP(w, r)
-		})
-	})
 
-	// Public Routes
-	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+			next.ServeHTTP(w, req)
+		})
+	}
+
+	// IMPORTANT: actually apply the CORS middleware.
+	r.Use(corsMiddleware)
+
+	// ============================================================
+	// HEALTH CHECK
+	// ============================================================
+	r.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
+
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
 			"status":    "ok",
 			"system":    "IIT Madras Academic Management System (Golang Production Backend)",
 			"timestamp": time.Now().Format(time.RFC3339),
 		})
-	}).Methods("GET")
+	}).Methods(http.MethodGet)
 
-	r.HandleFunc("/api/auth/login", authH.Login).Methods("POST")
-	r.HandleFunc("/api/auth/register", authH.Register).Methods("POST")
+	// ============================================================
+	// PUBLIC AUTH ROUTES
+	// ============================================================
+	r.HandleFunc(
+		"/api/auth/login",
+		authH.Login,
+	).Methods(http.MethodPost)
 
-	// Protected Admin Subrouter
+	r.HandleFunc(
+		"/api/auth/register",
+		authH.Register,
+	).Methods(http.MethodPost)
+
+	// ============================================================
+	// ADMIN ROUTES
+	// ============================================================
 	adminSub := r.PathPrefix("/api/admin").Subrouter()
-	adminSub.Use(middleware.JWTAuthMiddleware(cfg.JWTSecret))
-	adminSub.Use(middleware.RequireRole(models.RoleAdmin))
-	adminSub.HandleFunc("/reset-seed", adminH.ResetSeed).Methods("POST")
 
-	// Protected Auth Routes
+	adminSub.Use(
+		middleware.JWTAuthMiddleware(cfg.JWTSecret),
+	)
+	adminSub.Use(
+		middleware.RequireRole(models.RoleAdmin),
+	)
+
+	adminSub.HandleFunc(
+		"/reset-seed",
+		adminH.ResetSeed,
+	).Methods(http.MethodPost)
+
+	// ============================================================
+	// AUTHENTICATED AUTH ROUTES
+	// ============================================================
 	authSub := r.PathPrefix("/api/auth").Subrouter()
-	authSub.Use(middleware.JWTAuthMiddleware(cfg.JWTSecret))
-	authSub.HandleFunc("/me", authH.Me).Methods("GET")
 
-	// Student Protected Subrouter
+	authSub.Use(
+		middleware.JWTAuthMiddleware(cfg.JWTSecret),
+	)
+
+	authSub.HandleFunc(
+		"/me",
+		authH.Me,
+	).Methods(http.MethodGet)
+
+	// ============================================================
+	// STUDENT ROUTES
+	// ============================================================
 	stdSub := r.PathPrefix("/api/student").Subrouter()
-	stdSub.Use(middleware.JWTAuthMiddleware(cfg.JWTSecret))
-	stdSub.Use(middleware.RequireRole(models.RoleStudent))
 
-	stdSub.HandleFunc("/profile", studentH.GetProfile).Methods("GET")
-	stdSub.HandleFunc("/courses", studentH.GetAvailableCourses).Methods("GET")
-	stdSub.HandleFunc("/registrations", studentH.GetRegistrations).Methods("GET")
-	stdSub.HandleFunc("/registrations", studentH.RegisterCourse).Methods("POST")
-	stdSub.HandleFunc("/registrations/{id}", studentH.DropCourse).Methods("DELETE")
-	stdSub.HandleFunc("/grades", studentH.GetGrades).Methods("GET")
-	stdSub.HandleFunc("/notifications", studentH.GetNotifications).Methods("GET")
-	stdSub.HandleFunc("/notifications/{id}/read", studentH.MarkNotificationRead).Methods("PATCH")
+	stdSub.Use(
+		middleware.JWTAuthMiddleware(cfg.JWTSecret),
+	)
+	stdSub.Use(
+		middleware.RequireRole(models.RoleStudent),
+	)
 
-	// Faculty Protected Subrouter
+	stdSub.HandleFunc(
+		"/profile",
+		studentH.GetProfile,
+	).Methods(http.MethodGet)
+
+	stdSub.HandleFunc(
+		"/courses",
+		studentH.GetAvailableCourses,
+	).Methods(http.MethodGet)
+
+	stdSub.HandleFunc(
+		"/registrations",
+		studentH.GetRegistrations,
+	).Methods(http.MethodGet)
+
+	stdSub.HandleFunc(
+		"/registrations",
+		studentH.RegisterCourse,
+	).Methods(http.MethodPost)
+
+	stdSub.HandleFunc(
+		"/registrations/{id}",
+		studentH.DropCourse,
+	).Methods(http.MethodDelete)
+
+	stdSub.HandleFunc(
+		"/grades",
+		studentH.GetGrades,
+	).Methods(http.MethodGet)
+
+	stdSub.HandleFunc(
+		"/notifications",
+		studentH.GetNotifications,
+	).Methods(http.MethodGet)
+
+	stdSub.HandleFunc(
+		"/notifications/{id}/read",
+		studentH.MarkNotificationRead,
+	).Methods(http.MethodPatch)
+
+	// ============================================================
+	// FACULTY ROUTES
+	// ============================================================
 	facSub := r.PathPrefix("/api/faculty").Subrouter()
-	facSub.Use(middleware.JWTAuthMiddleware(cfg.JWTSecret))
-	facSub.Use(middleware.RequireRole(models.RoleFaculty))
 
-	facSub.HandleFunc("/profile", facultyH.GetProfile).Methods("GET")
-	facSub.HandleFunc("/courses", facultyH.GetAssignedCourses).Methods("GET")
-	facSub.HandleFunc("/courses/{id}/students", facultyH.GetEnrolledStudents).Methods("GET")
-	facSub.HandleFunc("/courses/{id}/grades", facultyH.UploadGrade).Methods("POST")
-	facSub.HandleFunc("/grades/{id}", facultyH.UpdateGrade).Methods("PUT")
-	facSub.HandleFunc("/courses/{id}/publish-grades", facultyH.PublishGrades).Methods("POST")
-	facSub.HandleFunc("/notifications", facultyH.GetNotifications).Methods("GET")
+	facSub.Use(
+		middleware.JWTAuthMiddleware(cfg.JWTSecret),
+	)
+	facSub.Use(
+		middleware.RequireRole(models.RoleFaculty),
+	)
 
+	facSub.HandleFunc(
+		"/profile",
+		facultyH.GetProfile,
+	).Methods(http.MethodGet)
+
+	facSub.HandleFunc(
+		"/courses",
+		facultyH.GetAssignedCourses,
+	).Methods(http.MethodGet)
+
+	facSub.HandleFunc(
+		"/courses/{id}/students",
+		facultyH.GetEnrolledStudents,
+	).Methods(http.MethodGet)
+
+	facSub.HandleFunc(
+		"/courses/{id}/grades",
+		facultyH.UploadGrade,
+	).Methods(http.MethodPost)
+
+	facSub.HandleFunc(
+		"/grades/{id}",
+		facultyH.UpdateGrade,
+	).Methods(http.MethodPut)
+
+	facSub.HandleFunc(
+		"/courses/{id}/publish-grades",
+		facultyH.PublishGrades,
+	).Methods(http.MethodPost)
+
+	facSub.HandleFunc(
+		"/notifications",
+		facultyH.GetNotifications,
+	).Methods(http.MethodGet)
+
+	// ============================================================
+	// START SERVER
+	// ============================================================
 	port := cfg.Port
+
 	if port == "" {
 		port = "8080"
 	}
 
-	fmt.Printf("[IITM AMS Go Backend] Server running on port %s...\n", port)
-	log.Fatal(http.ListenAndServe(":"+port, r))
+	fmt.Printf(
+		"[IITM AMS Go Backend] Server running on port %s...\n",
+		port,
+	)
+
+	log.Fatal(
+		http.ListenAndServe(":"+port, r),
+	)
 }

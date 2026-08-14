@@ -23,3 +23,6 @@ coverage/
 !.env.example
 !backend/.env.example
 
+
+# Local Netlify folder
+.netlify

@@ -17,7 +17,7 @@ services:
       - key: JWT_EXPIRATION_HOURS
         value: 24
       - key: CORS_ORIGIN
-        value: "*"
+        value: "https://iitm-ams.netlify.app"
       - key: ENABLE_EMAIL
         value: "false"
 
