@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -43,51 +44,6 @@ func main() {
 	r := mux.NewRouter()
 
 	// ============================================================
-	// GLOBAL CORS MIDDLEWARE
-	// ============================================================
-	corsMiddleware := func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			origin := req.Header.Get("Origin")
-
-			// Allow the configured frontend origin.
-			if cfg.CORSOrigin == "*" {
-				w.Header().Set("Access-Control-Allow-Origin", "*")
-			} else if origin == cfg.CORSOrigin {
-				w.Header().Set("Access-Control-Allow-Origin", origin)
-			}
-
-			w.Header().Set("Vary", "Origin")
-			w.Header().Set(
-				"Access-Control-Allow-Methods",
-				"GET, POST, PUT, PATCH, DELETE, OPTIONS",
-			)
-			w.Header().Set(
-				"Access-Control-Allow-Headers",
-				"Content-Type, Authorization",
-			)
-			w.Header().Set("Access-Control-Max-Age", "86400")
-
-			// Handle CORS preflight before Gorilla Mux routing.
-			if req.Method == http.MethodOptions {
-				w.WriteHeader(http.StatusNoContent)
-				return
-			}
-
-			next.ServeHTTP(w, req)
-		})
-	}
-
-	// IMPORTANT: actually apply the CORS middleware.
-	r.Use(corsMiddleware)
-
-	// Explicitly handle all CORS preflight requests.
-	r.PathPrefix("/").Methods(http.MethodOptions).HandlerFunc(
-		func(w http.ResponseWriter, req *http.Request) {
-			w.WriteHeader(http.StatusNoContent)
-		},
-	)
-
-	// ============================================================
 	// HEALTH CHECK
 	// ============================================================
 	r.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
@@ -121,6 +77,7 @@ func main() {
 	adminSub.Use(
 		middleware.JWTAuthMiddleware(cfg.JWTSecret),
 	)
+
 	adminSub.Use(
 		middleware.RequireRole(models.RoleAdmin),
 	)
@@ -152,6 +109,7 @@ func main() {
 	stdSub.Use(
 		middleware.JWTAuthMiddleware(cfg.JWTSecret),
 	)
+
 	stdSub.Use(
 		middleware.RequireRole(models.RoleStudent),
 	)
@@ -204,6 +162,7 @@ func main() {
 	facSub.Use(
 		middleware.JWTAuthMiddleware(cfg.JWTSecret),
 	)
+
 	facSub.Use(
 		middleware.RequireRole(models.RoleFaculty),
 	)
@@ -244,6 +203,67 @@ func main() {
 	).Methods(http.MethodGet)
 
 	// ============================================================
+	// CORS MIDDLEWARE
+	//
+	// IMPORTANT:
+	// This middleware wraps the ENTIRE router instead of using
+	// r.Use(). This guarantees OPTIONS requests are handled before
+	// Gorilla Mux can return a 404.
+	// ============================================================
+	corsHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+
+		origin := strings.TrimSpace(req.Header.Get("Origin"))
+
+		// Normalize configured CORS origin.
+		configuredOrigin := strings.TrimRight(
+			strings.TrimSpace(cfg.CORSOrigin),
+			"/",
+		)
+
+		// Allow configured frontend.
+		if configuredOrigin == "*" {
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+		} else if origin != "" && origin == configuredOrigin {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+			w.Header().Set("Access-Control-Allow-Credentials", "true")
+		}
+
+		// Required CORS headers.
+		w.Header().Set(
+			"Access-Control-Allow-Methods",
+			"GET, POST, PUT, PATCH, DELETE, OPTIONS",
+		)
+
+		w.Header().Set(
+			"Access-Control-Allow-Headers",
+			"Content-Type, Authorization, Accept",
+		)
+
+		w.Header().Set(
+			"Access-Control-Max-Age",
+			"86400",
+		)
+
+		w.Header().Set(
+			"Vary",
+			"Origin",
+		)
+
+		// --------------------------------------------------------
+		// Handle browser preflight request BEFORE router.
+		// --------------------------------------------------------
+		if req.Method == http.MethodOptions {
+
+			// Always return successful preflight response.
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		// Continue to normal Gorilla Mux routes.
+		r.ServeHTTP(w, req)
+	})
+
+	// ============================================================
 	// START SERVER
 	// ============================================================
 	port := cfg.Port
@@ -258,6 +278,6 @@ func main() {
 	)
 
 	log.Fatal(
-		http.ListenAndServe(":"+port, r),
+		http.ListenAndServe(":"+port, corsHandler),
 	)
 }
