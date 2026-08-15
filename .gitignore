@@ -26,3 +26,13 @@ coverage/
 
 # Local Netlify folder
 .netlify
+
+# Backup and temporary files
+*.backup
+*.backup2
+*.bak
+*.before-*
+*~
+currentUserBlock.txt
+login-test.json
+backend/login-test.json
