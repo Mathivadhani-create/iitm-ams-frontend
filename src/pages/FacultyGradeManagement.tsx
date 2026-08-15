@@ -234,11 +234,22 @@ console.log("[FACULTY DEBUG] FIRST STUDENT:", JSON.stringify(roster[0], null, 2)
       {/* Publish Result Modal / Banner */}
       {publishResult && (
         <div className="bg-gradient-to-r from-emerald-900 to-teal-900 text-white p-5 rounded-2xl shadow-lg space-y-3">
-          <div className="flex items-center space-x-2">
-            <Send className="w-5 h-5 text-emerald-300" />
-            <h2 className="font-bold text-sm text-emerald-200 uppercase tracking-wider">
-              Grade Publication Successful & Dispatched
-            </h2>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Send className="w-5 h-5 text-emerald-300" />
+              <h2 className="font-bold text-sm text-emerald-200 uppercase tracking-wider">
+                Grade Publication Successful & Dispatched
+              </h2>
+            </div>
+            <button
+              type="button"
+              onClick={() => setPublishResult(null)}
+              className="text-emerald-200 hover:text-white text-xl font-bold leading-none ml-3"
+              aria-label="Close publication result"
+              title="Close"
+            >
+              ×
+            </button>
           </div>
           <p className="text-xs text-emerald-100">
             Grades for <strong className="text-white">{offering?.course?.course_code}</strong> have been finalized in the database.
@@ -402,6 +413,7 @@ const department = studentInfo.department;
     </div>
   );
 };
+
 
 
 

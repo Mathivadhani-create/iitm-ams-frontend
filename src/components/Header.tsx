@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Bell, LogOut, User as UserIcon, RefreshCw, Check, BookOpen } from 'lucide-react';
 import { Notification } from '../types';
@@ -94,9 +94,20 @@ export const Header: React.FC = () => {
 
             {showDemoMenu && (
               <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-xl border border-gray-200 py-2 text-gray-800 text-xs z-50">
-                <div className="px-3 py-1.5 border-b border-gray-100 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">
-                  Recruitment Challenge Test Accounts
-                </div>
+                <div className="px-3 py-1.5 border-b border-gray-100 flex items-center justify-between">
+  <span className="font-semibold text-gray-500 uppercase tracking-wider text-[10px]">
+    Recruitment Challenge Test Accounts
+  </span>
+  <button
+    type="button"
+    onClick={() => setShowDemoMenu(false)}
+    className="ml-2 text-gray-400 hover:text-gray-800 text-lg font-bold leading-none"
+    aria-label="Close demo switcher"
+    title="Close"
+  >
+    ×
+  </button>
+</div>
                 <button
                   onClick={() => handleQuickLogin('student1@iitm.ac.in')}
                   className="w-full text-left px-3 py-2 hover:bg-gray-50 flex flex-col border-b border-gray-100"
@@ -161,7 +172,18 @@ export const Header: React.FC = () => {
                   <h3 className="font-bold text-xs uppercase tracking-wider text-gray-700">
                     Notifications ({(notifications || []).length})
                   </h3>
-                  <span className="text-[11px] text-gray-500">{unreadCount} unread</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-[11px] text-gray-500">{unreadCount} unread</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowNotifPopover(false)}
+                      className="text-gray-400 hover:text-gray-800 text-lg font-bold leading-none"
+                      aria-label="Close notifications"
+                      title="Close"
+                    >
+                      ×
+                    </button>
+                  </div>
                 </div>
                 <div className="max-h-72 overflow-y-auto divide-y divide-gray-100">
                   {(notifications || []).length === 0 ? (
@@ -226,6 +248,11 @@ export const Header: React.FC = () => {
     </header>
   );
 };
+
+
+
+
+
 
 
 

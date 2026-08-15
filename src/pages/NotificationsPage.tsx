@@ -3,9 +3,11 @@ import { apiService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { Notification } from '../types';
 import { Bell, CheckCircle2, Check } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export const NotificationsPage: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -46,7 +48,18 @@ export const NotificationsPage: React.FC = () => {
           <h1 className="text-xl font-bold text-gray-900">Notifications Inbox</h1>
           <p className="text-xs text-gray-500">Official academic announcements and alerts</p>
         </div>
-        <Bell className="w-6 h-6 text-[#800000]" />
+        <div className="flex items-center gap-3">
+          <Bell className="w-6 h-6 text-[#800000]" />
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard')}
+            className="text-gray-400 hover:text-gray-800 text-2xl font-bold leading-none px-2"
+            aria-label="Close notifications page"
+            title="Back to Dashboard"
+          >
+            ×
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -95,4 +108,5 @@ export const NotificationsPage: React.FC = () => {
     </div>
   );
 };
+
 

@@ -1,8 +1,10 @@
-import React from 'react';
+﻿import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { User, GraduationCap, Building2, Calendar, Mail, Hash, BookOpen } from 'lucide-react';
+import {  User, GraduationCap, Building2, Calendar, Mail, Hash, BookOpen , X } from 'lucide-react';
 
 export const StudentProfile: React.FC = () => {
+  const navigate = useNavigate();
   const { user, student } = useAuth();
 
   return (
@@ -12,15 +14,29 @@ export const StudentProfile: React.FC = () => {
         <div className="w-20 h-20 rounded-full bg-[#800000] text-yellow-300 flex items-center justify-center font-bold text-2xl uppercase border-4 border-red-100 shadow-sm shrink-0">
           {user?.name.slice(0, 2)}
         </div>
-        <div className="space-y-1 text-center sm:text-left">
-          <h1 className="text-xl font-bold text-gray-900">{user?.name}</h1>
-          <p className="text-xs text-[#800000] font-semibold tracking-wider uppercase">
-            Official Student Profile • IIT Madras
-          </p>
-          <p className="text-xs text-gray-500 font-mono">{user?.email}</p>
+
+        <div className="flex-1 space-y-1 text-center sm:text-left">
+          <div className="flex items-start justify-between gap-4 w-full">
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">{user?.name}</h1>
+              <p className="text-xs text-[#800000] font-semibold tracking-wider uppercase">
+                Official Student Profile • IIT Madras
+              </p>
+              <p className="text-xs text-gray-500 font-mono">{user?.email}</p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => navigate("/dashboard")}
+              aria-label="Close student profile"
+              title="Close"
+              className="p-2 rounded-lg text-gray-500 hover:text-[#800000] hover:bg-red-50 transition-colors border border-gray-200 shrink-0"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       </div>
-
       {/* Details Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-xs space-y-4">
@@ -80,3 +96,7 @@ export const StudentProfile: React.FC = () => {
     </div>
   );
 };
+
+
+
+

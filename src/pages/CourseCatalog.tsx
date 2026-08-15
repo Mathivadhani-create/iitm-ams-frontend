@@ -1,7 +1,8 @@
 ﻿import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { apiService } from '../services/api';
 import { CourseOffering, Registration } from '../types';
-import {
+import { 
   Search,
   BookOpen,
   UserCheck,
@@ -10,9 +11,10 @@ import {
   Users,
   Calendar,
   Lock,
-} from 'lucide-react';
+  X } from 'lucide-react';
 
 export const CourseCatalog: React.FC = () => {
+  const navigate = useNavigate();
   const [offerings, setOfferings] = useState<CourseOffering[]>([]);
   const [myRegistrations, setMyRegistrations] = useState<Registration[]>([]);
   const [activeSemester, setActiveSemester] = useState<any>(null);
@@ -86,6 +88,15 @@ export const CourseCatalog: React.FC = () => {
             Browse and register for available course offerings in the current semester
           </p>
         </div>
+        <button
+          type="button"
+          onClick={() => navigate("/dashboard")}
+          aria-label="Close course catalog"
+          title="Close"
+          className="p-2 rounded-lg text-gray-500 hover:text-[#800000] hover:bg-red-50 transition-colors border border-gray-200"
+        >
+          <X className="w-5 h-5" />
+        </button>
         {activeSemester && (
           <div className="flex items-center space-x-2 bg-emerald-50 text-emerald-800 border border-emerald-200 px-3 py-1.5 rounded-lg text-xs font-semibold shrink-0">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -253,5 +264,8 @@ export const CourseCatalog: React.FC = () => {
     </div>
   );
 };
+
+
+
 
 

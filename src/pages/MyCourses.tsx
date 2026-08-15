@@ -1,9 +1,11 @@
+﻿import { useNavigate } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
 import { Registration } from '../types';
-import { BookOpen, Trash2, Calendar, CheckCircle2, AlertTriangle } from 'lucide-react';
+import {  BookOpen, Trash2, Calendar, CheckCircle2, AlertTriangle , X } from 'lucide-react';
 
 export const MyCourses: React.FC = () => {
+  const navigate = useNavigate();
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [loading, setLoading] = useState(true);
   const [droppingId, setDroppingId] = useState<string | null>(null);
@@ -58,6 +60,15 @@ export const MyCourses: React.FC = () => {
             Active course registrations for Monsoon Semester 2026
           </p>
         </div>
+        <button
+          type="button"
+          onClick={() => navigate("/dashboard")}
+          aria-label="Close registered courses"
+          title="Close"
+          className="p-2 rounded-lg text-gray-500 hover:text-[#800000] hover:bg-red-50 transition-colors border border-gray-200"
+        >
+          <X className="w-5 h-5" />
+        </button>
         <div className="bg-red-50 text-[#800000] border border-red-200 px-4 py-2 rounded-xl text-xs font-bold shrink-0">
           Total Term Credits: {totalCredits} Credits
         </div>
@@ -123,3 +134,4 @@ export const MyCourses: React.FC = () => {
     </div>
   );
 };
+

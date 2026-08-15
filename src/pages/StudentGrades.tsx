@@ -3,9 +3,11 @@ import { apiService } from '../services/api';
 import { GradeBadge } from '../components/GradeBadge';
 import { GraduationCap, Award, Printer, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 export const StudentGrades: React.FC = () => {
   const { student, user } = useAuth();
+  const navigate = useNavigate();
   const [gradesData, setGradesData] = useState<{
     cgpa: number;
     total_credits_earned: number;
@@ -46,13 +48,24 @@ export const StudentGrades: React.FC = () => {
             Published course grades, credit breakdown, and CGPA calculation
           </p>
         </div>
-        <button
-          onClick={handlePrint}
-          className="px-3.5 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-colors border border-gray-300 shrink-0"
-        >
-          <Printer className="w-4 h-4" />
-          <span>Print Official Transcript</span>
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={handlePrint}
+            className="px-3.5 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-colors border border-gray-300"
+          >
+            <Printer className="w-4 h-4" />
+            <span>Print Official Transcript</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard')}
+            className="text-gray-400 hover:text-gray-800 text-2xl font-bold leading-none px-2"
+            aria-label="Close grade transcript"
+            title="Back to Dashboard"
+          >
+            ×
+          </button>
+        </div>
       </div>
 
       {/* CGPA Summary Banner */}
@@ -158,6 +171,7 @@ export const StudentGrades: React.FC = () => {
     </div>
   );
 };
+
 
 
 

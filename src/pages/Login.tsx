@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { BookOpen, ShieldCheck, UserCheck, AlertCircle, ArrowRight } from 'lucide-react';
@@ -11,6 +11,7 @@ export const Login: React.FC = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showTestAccounts, setShowTestAccounts] = useState(true);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -131,7 +132,17 @@ export const Login: React.FC = () => {
         </div>
 
         {/* Evaluation Quick Demo Selector */}
-        <div className="bg-white/80 rounded-xl p-4 border border-gray-200 space-y-3">
+        {showTestAccounts && (
+        <div className="relative bg-white/80 rounded-xl p-4 border border-gray-200 space-y-3">
+          <button
+            type="button"
+            onClick={() => setShowTestAccounts(false)}
+            className="absolute top-3 right-3 text-gray-400 hover:text-gray-800 text-lg font-bold leading-none"
+            aria-label="Close test accounts"
+            title="Close"
+          >
+            ×
+          </button>
           <div className="flex items-center space-x-1.5 text-xs font-bold text-gray-700">
             <UserCheck className="w-4 h-4 text-[#800000]" />
             <span>Recruitment Evaluation Test Accounts</span>
@@ -170,7 +181,15 @@ export const Login: React.FC = () => {
             </button>
           </div>
         </div>
+        )}
       </div>
     </div>
   );
 };
+
+
+
+
+
+
+

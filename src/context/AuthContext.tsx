@@ -110,17 +110,67 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       localStorage.setItem('iitm_ams_token', res.token);
       setToken(res.token);
 
-      // Set authenticated user immediately so protected routes
-      // can render without waiting for a second state transition.
+      // Set authenticated user immediately.
       setUser(res.user);
 
-      // Load role-specific profile information.
+      // Load the authenticated user and the complete role-specific profile.
       try {
         const currentUser = await apiService.getCurrentUser();
 
         setUser(currentUser.user);
-        setStudent(currentUser.student || null);
-        setFaculty(currentUser.faculty || null);
+
+        if (currentUser.user.role === 'student') {
+          try {
+            const studentProfile = await apiService.getStudentProfile();
+
+            console.log(
+              '[AuthContext] Student profile loaded after login:',
+              studentProfile
+            );
+            console.log(
+              '[AuthContext] Student Roll Number:',
+              studentProfile?.roll_number
+            );
+
+            setStudent(studentProfile);
+          } catch (studentError) {
+            console.warn(
+              '[AuthContext] Student profile loading failed after login:',
+              studentError
+            );
+
+            setStudent(currentUser.student || null);
+          }
+
+          setFaculty(null);
+        } else if (currentUser.user.role === 'faculty') {
+          try {
+            const facultyProfile = await apiService.getFacultyProfile();
+
+            console.log(
+              '[AuthContext] Faculty profile loaded after login:',
+              facultyProfile
+            );
+            console.log(
+              '[AuthContext] Faculty Employee ID:',
+              facultyProfile?.employee_id
+            );
+
+            setFaculty(facultyProfile);
+          } catch (facultyError) {
+            console.warn(
+              '[AuthContext] Faculty profile loading failed after login:',
+              facultyError
+            );
+
+            setFaculty(currentUser.faculty || null);
+          }
+
+          setStudent(null);
+        } else {
+          setStudent(null);
+          setFaculty(null);
+        }
       } catch (profileError) {
         console.warn(
           '[AuthContext] Profile loading failed after successful login:',
@@ -192,6 +242,8 @@ export const useAuth = () => {
   }
   return context;
 };
+
+
 
 
 
