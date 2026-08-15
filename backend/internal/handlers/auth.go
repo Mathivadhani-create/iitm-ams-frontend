@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -28,55 +29,215 @@ type LoginRequest struct {
 }
 
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
+
+	// ============================================================
+	// LOGIN DEBUG
+	// ============================================================
+	log.Printf(
+		"[LOGIN DEBUG] Method=%s Content-Type=%q ContentLength=%d",
+		r.Method,
+		r.Header.Get("Content-Type"),
+		r.ContentLength,
+	)
+
+	// Read and decode JSON request body.
 	var req LoginRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respondJSON(w, http.StatusBadRequest, models.ApiResponse{Success: false, Message: "Invalid request payload."})
+
+	decoder := json.NewDecoder(r.Body)
+
+	if err := decoder.Decode(&req); err != nil {
+
+		log.Printf(
+			"[LOGIN DEBUG] JSON decode failed: %v",
+			err,
+		)
+
+		respondJSON(
+			w,
+			http.StatusBadRequest,
+			models.ApiResponse{
+				Success: false,
+				Message: "Invalid request payload: " + err.Error(),
+			},
+		)
 		return
 	}
 
+	// ============================================================
+	// DEBUG DECODED VALUES
+	// ============================================================
+	log.Printf(
+		"[LOGIN DEBUG] Email=%q PasswordLength=%d",
+		req.Email,
+		len(req.Password),
+	)
+
+	// Validate required fields.
+	if req.Email == "" || req.Password == "" {
+		log.Printf(
+			"[LOGIN DEBUG] Missing email or password",
+		)
+
+		respondJSON(
+			w,
+			http.StatusBadRequest,
+			models.ApiResponse{
+				Success: false,
+				Message: "Email and password are required.",
+			},
+		)
+		return
+	}
+
+	// ============================================================
+	// FIND USER
+	// ============================================================
 	user, err := h.store.GetUserByEmail(req.Email)
+
 	if err != nil {
-		respondJSON(w, http.StatusUnauthorized, models.ApiResponse{Success: false, Message: "Invalid credentials. Email not found."})
+		log.Printf(
+			"[LOGIN DEBUG] User lookup failed for %q: %v",
+			req.Email,
+			err,
+		)
+
+		respondJSON(
+			w,
+			http.StatusUnauthorized,
+			models.ApiResponse{
+				Success: false,
+				Message: "Invalid credentials. Email not found.",
+			},
+		)
 		return
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
-		respondJSON(w, http.StatusUnauthorized, models.ApiResponse{Success: false, Message: "Invalid credentials. Password incorrect."})
+	log.Printf(
+		"[LOGIN DEBUG] User found: ID=%s Role=%s",
+		user.ID,
+		user.Role,
+	)
+
+	// ============================================================
+	// CHECK PASSWORD
+	// ============================================================
+	if err := bcrypt.CompareHashAndPassword(
+		[]byte(user.PasswordHash),
+		[]byte(req.Password),
+	); err != nil {
+
+		log.Printf(
+			"[LOGIN DEBUG] Password verification failed for %q: %v",
+			req.Email,
+			err,
+		)
+
+		respondJSON(
+			w,
+			http.StatusUnauthorized,
+			models.ApiResponse{
+				Success: false,
+				Message: "Invalid credentials. Password incorrect.",
+			},
+		)
 		return
 	}
 
+	log.Printf(
+		"[LOGIN DEBUG] Password verification successful for %q",
+		req.Email,
+	)
+
+	// ============================================================
+	// GET STUDENT / FACULTY PROFILE ID
+	// ============================================================
 	var studentID, facultyID string
+
 	if user.Role == models.RoleStudent {
+
 		if st, err := h.store.GetStudentByUserID(user.ID); err == nil {
 			studentID = st.ID
+
+			log.Printf(
+				"[LOGIN DEBUG] Student profile found: %s",
+				studentID,
+			)
+		} else {
+			log.Printf(
+				"[LOGIN DEBUG] Student profile lookup failed: %v",
+				err,
+			)
 		}
+
 	} else if user.Role == models.RoleFaculty {
+
 		if f, err := h.store.GetFacultyByUserID(user.ID); err == nil {
 			facultyID = f.ID
+
+			log.Printf(
+				"[LOGIN DEBUG] Faculty profile found: %s",
+				facultyID,
+			)
+		} else {
+			log.Printf(
+				"[LOGIN DEBUG] Faculty profile lookup failed: %v",
+				err,
+			)
 		}
 	}
 
-	tokenStr, err := generateJWT(user, studentID, facultyID, h.cfg.JWTSecret)
+	// ============================================================
+	// GENERATE JWT
+	// ============================================================
+	tokenStr, err := generateJWT(
+		user,
+		studentID,
+		facultyID,
+		h.cfg.JWTSecret,
+	)
+
 	if err != nil {
-		respondJSON(w, http.StatusInternalServerError, models.ApiResponse{Success: false, Message: "Failed to issue token."})
+
+		log.Printf(
+			"[LOGIN DEBUG] JWT generation failed: %v",
+			err,
+		)
+
+		respondJSON(
+			w,
+			http.StatusInternalServerError,
+			models.ApiResponse{
+				Success: false,
+				Message: "Failed to issue token.",
+			},
+		)
 		return
 	}
 
-	respondJSON(w, http.StatusOK, models.ApiResponse{
-		Success: true,
-		Message: "Login successful.",
-		Data: map[string]interface{}{
-			"token": tokenStr,
-			"user": map[string]interface{}{
-				"id":        user.ID,
-				"name":      user.Name,
-				"email":     user.Email,
-				"role":      user.Role,
-				"studentId": studentID,
-				"facultyId": facultyID,
+	log.Printf(
+		"[LOGIN DEBUG] Login successful for %q",
+		req.Email,
+	)
+
+	respondJSON(
+		w,
+		http.StatusOK,
+		models.ApiResponse{
+			Success: true,
+			Message: "Login successful.",
+			Data: map[string]interface{}{
+				"token": tokenStr,
+				"user": map[string]interface{}{
+					"id":        user.ID,
+					"name":      user.Name,
+					"email":     user.Email,
+					"role":      user.Role,
+					"studentId": studentID,
+					"facultyId": facultyID,
+				},
 			},
 		},
-	})
+	)
 }
 
 type RegisterRequest struct {
@@ -92,20 +253,50 @@ type RegisterRequest struct {
 }
 
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
+
 	var req RegisterRequest
+
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respondJSON(w, http.StatusBadRequest, models.ApiResponse{Success: false, Message: "Invalid request payload."})
+
+		respondJSON(
+			w,
+			http.StatusBadRequest,
+			models.ApiResponse{
+				Success: false,
+				Message: "Invalid request payload: " + err.Error(),
+			},
+		)
 		return
 	}
 
 	if req.Name == "" || req.Email == "" || req.Password == "" {
-		respondJSON(w, http.StatusBadRequest, models.ApiResponse{Success: false, Message: "Name, email, and password are required."})
+
+		respondJSON(
+			w,
+			http.StatusBadRequest,
+			models.ApiResponse{
+				Success: false,
+				Message: "Name, email, and password are required.",
+			},
+		)
 		return
 	}
 
-	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	hash, err := bcrypt.GenerateFromPassword(
+		[]byte(req.Password),
+		bcrypt.DefaultCost,
+	)
+
 	if err != nil {
-		respondJSON(w, http.StatusInternalServerError, models.ApiResponse{Success: false, Message: "Failed to encrypt password."})
+
+		respondJSON(
+			w,
+			http.StatusInternalServerError,
+			models.ApiResponse{
+				Success: false,
+				Message: "Failed to encrypt password.",
+			},
+		)
 		return
 	}
 
@@ -118,12 +309,22 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.store.CreateUser(user); err != nil {
-		respondJSON(w, http.StatusConflict, models.ApiResponse{Success: false, Message: err.Error()})
+
+		respondJSON(
+			w,
+			http.StatusConflict,
+			models.ApiResponse{
+				Success: false,
+				Message: err.Error(),
+			},
+		)
 		return
 	}
 
 	var studentID, facultyID string
+
 	if req.Role == models.RoleStudent {
+
 		student := &models.Student{
 			ID:         "std-" + uuid.New().String()[:8],
 			UserID:     user.ID,
@@ -133,55 +334,113 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 			Year:       req.Year,
 			User:       user,
 		}
+
 		_ = h.store.CreateStudent(student)
+
 		studentID = student.ID
 	}
 
-	tokenStr, _ := generateJWT(user, studentID, facultyID, h.cfg.JWTSecret)
+	tokenStr, _ := generateJWT(
+		user,
+		studentID,
+		facultyID,
+		h.cfg.JWTSecret,
+	)
 
-	respondJSON(w, http.StatusCreated, models.ApiResponse{
-		Success: true,
-		Message: "User account created successfully.",
-		Data: map[string]interface{}{
-			"token": tokenStr,
-			"user": map[string]interface{}{
-				"id":        user.ID,
-				"name":      user.Name,
-				"email":     user.Email,
-				"role":      user.Role,
-				"studentId": studentID,
+	respondJSON(
+		w,
+		http.StatusCreated,
+		models.ApiResponse{
+			Success: true,
+			Message: "User account created successfully.",
+			Data: map[string]interface{}{
+				"token": tokenStr,
+				"user": map[string]interface{}{
+					"id":        user.ID,
+					"name":      user.Name,
+					"email":     user.Email,
+					"role":      user.Role,
+					"studentId": studentID,
+				},
 			},
 		},
-	})
+	)
 }
 
 func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
+
 	claims, ok := middleware.GetUserClaims(r)
+
 	if !ok {
-		respondJSON(w, http.StatusUnauthorized, models.ApiResponse{Success: false, Message: "Unauthorized."})
+		respondJSON(
+			w,
+			http.StatusUnauthorized,
+			models.ApiResponse{
+				Success: false,
+				Message: "Unauthorized.",
+			},
+		)
 		return
 	}
 
 	user, err := h.store.GetUserByID(claims.UserID)
+
 	if err != nil {
-		respondJSON(w, http.StatusNotFound, models.ApiResponse{Success: false, Message: "User profile not found."})
+		respondJSON(
+			w,
+			http.StatusNotFound,
+			models.ApiResponse{
+				Success: false,
+				Message: "User profile not found.",
+			},
+		)
 		return
 	}
 
-	respondJSON(w, http.StatusOK, models.ApiResponse{
-		Success: true,
-		Data: map[string]interface{}{
-			"id":        user.ID,
-			"name":      user.Name,
-			"email":     user.Email,
-			"role":      user.Role,
-			"studentId": claims.StudentID,
-			"facultyId": claims.FacultyID,
+	data := map[string]interface{}{
+		"id":        user.ID,
+		"name":      user.Name,
+		"email":     user.Email,
+		"role":      user.Role,
+		"studentId": claims.StudentID,
+		"facultyId": claims.FacultyID,
+	}
+
+	if user.Role == models.RoleStudent {
+
+		student, err := h.store.GetStudentByUserID(user.ID)
+
+		if err == nil && student != nil {
+			data["student"] = student
+		}
+	}
+
+	if user.Role == models.RoleFaculty {
+
+		faculty, err := h.store.GetFacultyByUserID(user.ID)
+
+		if err == nil && faculty != nil {
+			data["faculty"] = faculty
+		}
+	}
+
+	respondJSON(
+		w,
+		http.StatusOK,
+		models.ApiResponse{
+			Success: true,
+			Data:    data,
 		},
-	})
+	)
 }
 
-func generateJWT(u *models.User, studentID, facultyID, jwtSecret string) (string, error) {
+func generateJWT(
+	u *models.User,
+	studentID,
+	facultyID,
+	jwtSecret string,
+) (string, error) {
+
 	claims := middleware.Claims{
 		UserID:    u.ID,
 		Role:      u.Role,
@@ -191,12 +450,25 @@ func generateJWT(u *models.User, studentID, facultyID, jwtSecret string) (string
 		FacultyID: facultyID,
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	token := jwt.NewWithClaims(
+		jwt.SigningMethodHS256,
+		claims,
+	)
+
 	return token.SignedString([]byte(jwtSecret))
 }
 
-func respondJSON(w http.ResponseWriter, status int, resp models.ApiResponse) {
-	w.Header().Set("Content-Type", "application/json")
+func respondJSON(
+	w http.ResponseWriter,
+	status int,
+	resp models.ApiResponse,
+) {
+	w.Header().Set(
+		"Content-Type",
+		"application/json",
+	)
+
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(resp)
+
+	_ = json.NewEncoder(w).Encode(resp)
 }

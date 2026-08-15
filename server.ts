@@ -1,4 +1,4 @@
-import express from 'express';
+﻿import express from 'express';
 import path from 'path';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -11,35 +11,48 @@ dotenv.config();
 async function startServer() {
   const app = express();
   const PORT = parseInt(process.env.PORT || '3000', 10);
-  const GO_PORT = process.env.GO_PORT || '9090';
+  const GO_PORT = process.env.GO_PORT || '8080';
+  const USE_EXTERNAL_GO_BACKEND = process.env.USE_EXTERNAL_GO_BACKEND === 'true';
 
-  // 1. Launch Go production backend binary
-  console.log(`[IITM AMS] Starting Go Production Backend on port ${GO_PORT}...`);
-  const goBackend = spawn('./backend/bin/server', [], {
-    env: {
-      ...process.env,
-      PORT: GO_PORT,
-    },
-    stdio: 'inherit',
-  });
+  // 1. Launch Go backend only when explicitly requested.
+  // During local development, we use the already-running PostgreSQL-connected
+  // Go backend on port 8080.
+  let goBackend: ReturnType<typeof spawn> | null = null;
 
-  goBackend.on('error', (err) => {
-    console.error('[IITM AMS] Failed to start Go backend binary:', err);
-  });
+  if (!USE_EXTERNAL_GO_BACKEND) {
+    console.log(`[IITM AMS] Starting Go Production Backend on port ${GO_PORT}...`);
 
-  goBackend.on('exit', (code) => {
-    if (code !== 0) {
-      console.warn(`[IITM AMS] Go backend binary exited with code ${code}`);
-    }
-  });
+    goBackend = spawn('./backend/bin/server', [], {
+      env: {
+        ...process.env,
+        PORT: GO_PORT,
+      },
+      stdio: 'inherit',
+    });
+
+    goBackend.on('error', (err) => {
+      console.error('[IITM AMS] Failed to start Go backend binary:', err);
+    });
+
+    goBackend.on('exit', (code) => {
+      if (code !== 0) {
+        console.warn(`[IITM AMS] Go backend binary exited with code ${code}`);
+      }
+    });
+  } else {
+    console.log(
+      `[IITM AMS] Using existing Go backend on port ${GO_PORT}.`
+    );
+  }
 
   // Global Middlewares
   const corsOrigin = process.env.CORS_ORIGIN || '*';
   app.use(cors({ origin: corsOrigin, credentials: true }));
 
-  // 2. Reverse Proxy ALL /api/* requests directly to Go Production Backend (running Gorilla Mux)
+  // 2. Reverse Proxy ALL /api/* requests to Go backend.
   app.use('/api', (req, res) => {
     const targetPath = '/api' + (req.url === '/' ? '' : req.url);
+
     const options: http.RequestOptions = {
       hostname: '127.0.0.1',
       port: parseInt(GO_PORT, 10),
@@ -57,7 +70,11 @@ async function startServer() {
     });
 
     proxyReq.on('error', (err) => {
-      console.error(`[Proxy Error] Failed to reach Go backend on port ${GO_PORT}:`, err.message);
+      console.error(
+        `[Proxy Error] Failed to reach Go backend on port ${GO_PORT}:`,
+        err.message
+      );
+
       res.status(502).json({
         success: false,
         error: 'Go Production Backend Service Unavailable.',
@@ -74,20 +91,27 @@ async function startServer() {
   // 3. Vite middleware for development or static serving for production
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: {
+        middlewareMode: true,
+      },
       appType: 'spa',
     });
+
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), 'dist');
+
     app.use(express.static(distPath));
+
     app.get('*', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`[IITM AMS Frontend Gateway] Running on http://0.0.0.0:${PORT}`);
+    console.log(
+      `[IITM AMS Frontend Gateway] Running on http://0.0.0.0:${PORT}`
+    );
   });
 }
 

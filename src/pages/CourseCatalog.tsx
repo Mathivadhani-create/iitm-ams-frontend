@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
 import { CourseOffering, Registration } from '../types';
 import {
@@ -30,9 +30,9 @@ export const CourseCatalog: React.FC = () => {
         apiService.getAvailableCourses(),
         apiService.getStudentRegistrations(),
       ]);
-      setOfferings(resCatalog.offerings);
-      setActiveSemester(resCatalog.activeSemester);
-      setMyRegistrations(resRegs.filter((r) => r.status === 'registered'));
+      setOfferings(Array.isArray(resCatalog) ? resCatalog : (Array.isArray(resCatalog?.offerings) ? resCatalog.offerings : []));
+      setActiveSemester(resCatalog?.activeSemester ?? (Array.isArray(resCatalog) && resCatalog.length > 0 ? resCatalog[0]?.semester : null));
+      setMyRegistrations(Array.isArray(resRegs) ? resRegs.filter((r) => r.status === 'registered') : []);
     } catch (err: any) {
       console.error('Failed to load course catalog:', err);
     } finally {
@@ -253,3 +253,5 @@ export const CourseCatalog: React.FC = () => {
     </div>
   );
 };
+
+

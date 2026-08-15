@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
 import { GradeBadge } from '../components/GradeBadge';
 import { GraduationCap, Award, Printer, CheckCircle2 } from 'lucide-react';
@@ -62,7 +62,7 @@ export const StudentGrades: React.FC = () => {
             Cumulative GPA (CGPA)
           </span>
           <div className="text-3xl font-black text-yellow-300">
-            {gradesData.cgpa > 0 ? gradesData.cgpa.toFixed(2) : '9.50'} / 10.0
+            {gradesData.cgpa.toFixed(2)} / 10.0
           </div>
           <p className="text-[11px] text-red-100">10-point Academic Scale</p>
         </div>
@@ -97,7 +97,7 @@ export const StudentGrades: React.FC = () => {
 
         {loading ? (
           <div className="text-center py-8 text-xs text-gray-500">Loading grade record...</div>
-        ) : gradesData.grades.length === 0 ? (
+        ) : (gradesData.grades ?? []).length === 0 ? (
           <div className="text-center py-8 text-xs text-gray-500">
             No published grades available yet for your account.
           </div>
@@ -119,16 +119,16 @@ export const StudentGrades: React.FC = () => {
                 {gradesData.grades.map((g, idx) => (
                   <tr key={idx} className="hover:bg-gray-50/80">
                     <td className="py-3 px-3 font-mono font-bold text-[#800000]">
-                      {g.course_code}
+                      {g.course_code ?? "-"}
                     </td>
-                    <td className="py-3 px-3 text-gray-900 font-semibold">{g.course_name}</td>
-                    <td className="py-3 px-3 text-gray-600">{g.semester_name}</td>
-                    <td className="py-3 px-3 text-gray-700">{g.credits}</td>
+                    <td className="py-3 px-3 text-gray-900 font-semibold">{g.course_name ?? "-"}</td>
+                    <td className="py-3 px-3 text-gray-600">{g.semester_name ?? "-"}</td>
+                    <td className="py-3 px-3 text-gray-700">{g.credits ?? 0}</td>
                     <td className="py-3 px-3">
-                      <GradeBadge grade={g.grade} />
+                      <GradeBadge grade={typeof g.grade === "object" ? g.grade.grade : g.grade} />
                     </td>
                     <td className="py-3 px-3 text-right font-bold text-gray-900">
-                      {g.grade_point} / 10
+                      {g.grade_point ?? 0} / 10
                     </td>
                     <td className="py-3 px-3 text-right text-gray-500 font-mono text-[11px]">
                       {g.published_at ? new Date(g.published_at).toLocaleDateString() : 'Published'}
@@ -145,16 +145,21 @@ export const StudentGrades: React.FC = () => {
       <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 space-y-2 text-xs text-gray-600">
         <h3 className="font-bold text-gray-800 text-xs">IIT Madras Academic Grading System:</h3>
         <p className="text-[11px] leading-relaxed">
-          <strong className="text-gray-900">A+ / A</strong> (10.0 points) •{' '}
-          <strong className="text-gray-900">A-</strong> (9.0 points) •{' '}
-          <strong className="text-gray-900">B+</strong> (8.0 points) •{' '}
-          <strong className="text-gray-900">B</strong> (7.0 points) •{' '}
-          <strong className="text-gray-900">B-</strong> (6.0 points) •{' '}
-          <strong className="text-gray-900">C+ / C</strong> (5.0 points) •{' '}
-          <strong className="text-gray-900">D</strong> (4.0 points) •{' '}
+          <strong className="text-gray-900">A+ / A</strong> (10.0 points) &bull;{' '}
+          <strong className="text-gray-900">A-</strong> (9.0 points) &bull;{' '}
+          <strong className="text-gray-900">B+</strong> (8.0 points) &bull;{' '}
+          <strong className="text-gray-900">B</strong> (7.0 points) &bull;{' '}
+          <strong className="text-gray-900">B-</strong> (6.0 points) &bull;{' '}
+          <strong className="text-gray-900">C+ / C</strong> (5.0 points) &bull;{' '}
+          <strong className="text-gray-900">D</strong> (4.0 points) &bull;{' '}
           <strong className="text-rose-700">F</strong> (0 points)
         </p>
       </div>
     </div>
   );
 };
+
+
+
+
+

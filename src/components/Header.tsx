@@ -11,17 +11,17 @@ export const Header: React.FC = () => {
   const [showDemoMenu, setShowDemoMenu] = useState<boolean>(false);
   const [isResetting, setIsResetting] = useState<boolean>(false);
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const unreadCount = (notifications || []).filter((n) => !n.read).length;
 
   const fetchNotifs = async () => {
     if (!user) return;
     try {
       if (user.role === 'student') {
         const notifs = await apiService.getStudentNotifications();
-        setNotifications(notifs);
+        setNotifications(notifs || []);
       } else if (user.role === 'faculty') {
         const notifs = await apiService.getFacultyNotifications();
-        setNotifications(notifs);
+        setNotifications(notifs || []);
       }
     } catch (err) {
       console.error('[Header] Error fetching notifications:', err);
@@ -74,7 +74,7 @@ export const Header: React.FC = () => {
               IIT Madras Academic Management System
             </h1>
             <p className="text-[11px] text-red-200 tracking-wider uppercase font-medium">
-              Academic Section â€¢ Official Portal
+              Academic Section • Official Portal
             </p>
           </div>
         </div>
@@ -102,37 +102,39 @@ export const Header: React.FC = () => {
                   className="w-full text-left px-3 py-2 hover:bg-gray-50 flex flex-col border-b border-gray-100"
                 >
                   <span className="font-semibold text-gray-900">Aravind S. (Student)</span>
-                  <span className="text-gray-500 text-[11px]">Roll: BE21B001 â€¢ student1@iitm.ac.in</span>
+                  <span className="text-gray-500 text-[11px]">Roll: BE21B001 • student1@iitm.ac.in</span>
                 </button>
                 <button
                   onClick={() => handleQuickLogin('student2@iitm.ac.in')}
                   className="w-full text-left px-3 py-2 hover:bg-gray-50 flex flex-col border-b border-gray-100"
                 >
                   <span className="font-semibold text-gray-900">Ananya Sharma (Student 2)</span>
-                  <span className="text-gray-500 text-[11px]">Roll: CS22M005 â€¢ student2@iitm.ac.in</span>
+                  <span className="text-gray-500 text-[11px]">Roll: CS22M005 • student2@iitm.ac.in</span>
                 </button>
                 <button
                   onClick={() => handleQuickLogin('faculty1@iitm.ac.in')}
                   className="w-full text-left px-3 py-2 hover:bg-gray-50 flex flex-col border-b border-gray-100"
                 >
                   <span className="font-semibold text-gray-900">Prof. Ramesh C. (Faculty)</span>
-                  <span className="text-gray-500 text-[11px]">Emp: FAC101 â€¢ CS3100 / AI5001</span>
+                  <span className="text-gray-500 text-[11px]">Emp: FAC101 • CS3100 / AI5001</span>
                 </button>
                 <button
                   onClick={() => handleQuickLogin('faculty2@iitm.ac.in')}
                   className="w-full text-left px-3 py-2 hover:bg-gray-50 flex flex-col border-b border-gray-100"
                 >
                   <span className="font-semibold text-gray-900">Prof. Sunita K. (Faculty 2)</span>
-                  <span className="text-gray-500 text-[11px]">Emp: FAC102 â€¢ CS4200 / MA1101</span>
+                  <span className="text-gray-500 text-[11px]">Emp: FAC102 • CS4200 / MA1101</span>
                 </button>
-                <div className="p-2 bg-gray-50 border-t border-gray-100">
-                  <button
-                    onClick={handleResetSeed}
-                    className="w-full py-1.5 bg-red-50 text-[#800000] border border-red-200 rounded-lg font-medium text-center hover:bg-red-100 transition-colors"
-                  >
-                    Reset Seed Database
-                  </button>
-                </div>
+                {user?.role === 'admin' && (
+                  <div className="p-2 bg-gray-50 border-t border-gray-100">
+                    <button
+                      onClick={handleResetSeed}
+                      className="w-full py-1.5 bg-red-50 text-[#800000] border border-red-200 rounded-lg font-medium text-center hover:bg-red-100 transition-colors"
+                    >
+                      Reset Seed Database
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -157,15 +159,15 @@ export const Header: React.FC = () => {
               <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-2xl border border-gray-200 py-2 text-gray-800 z-50">
                 <div className="px-4 py-2 border-b border-gray-100 flex items-center justify-between">
                   <h3 className="font-bold text-xs uppercase tracking-wider text-gray-700">
-                    Notifications ({notifications.length})
+                    Notifications ({(notifications || []).length})
                   </h3>
                   <span className="text-[11px] text-gray-500">{unreadCount} unread</span>
                 </div>
                 <div className="max-h-72 overflow-y-auto divide-y divide-gray-100">
-                  {notifications.length === 0 ? (
+                  {(notifications || []).length === 0 ? (
                     <div className="p-4 text-center text-xs text-gray-500">No notifications yet.</div>
                   ) : (
-                    notifications.slice(0, 8).map((n) => (
+                    (notifications || []).slice(0, 8).map((n) => (
                       <div
                         key={n.id}
                         className={`p-3 text-xs flex items-start justify-between ${
@@ -224,3 +226,6 @@ export const Header: React.FC = () => {
     </header>
   );
 };
+
+
+

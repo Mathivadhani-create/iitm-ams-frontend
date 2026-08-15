@@ -12,18 +12,18 @@ import (
 )
 
 type Store struct {
-	mu             sync.RWMutex
-	db             *sql.DB
-	pgStore        *PGStore
-	users          map[string]*models.User
-	students       map[string]*models.Student
-	faculties      map[string]*models.Faculty
-	courses        map[string]*models.Course
-	semesters      map[string]*models.Semester
-	offerings      map[string]*models.CourseOffering
-	registrations  map[string]*models.Registration
-	grades         map[string]*models.Grade
-	notifications  map[string]*models.Notification
+	mu            sync.RWMutex
+	db            *sql.DB
+	pgStore       *PGStore
+	users         map[string]*models.User
+	students      map[string]*models.Student
+	faculties     map[string]*models.Faculty
+	courses       map[string]*models.Course
+	semesters     map[string]*models.Semester
+	offerings     map[string]*models.CourseOffering
+	registrations map[string]*models.Registration
+	grades        map[string]*models.Grade
+	notifications map[string]*models.Notification
 }
 
 func NewStore(db *sql.DB) *Store {
@@ -607,4 +607,28 @@ func GetGradePoint(g models.GradeLetter) (float64, error) {
 	default:
 		return 0.0, fmt.Errorf("invalid grade '%s'. Allowed grades are: A+, A, A-, B+, B, B-, C+, C, C-, D, F", g)
 	}
+}
+
+// Faculty Create Method
+func (s *Store) CreateFaculty(f *models.Faculty) error {
+	if s.pgStore != nil {
+		return s.pgStore.CreateFaculty(f)
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for _, existing := range s.faculties {
+		if existing.UserID == f.UserID {
+			return fmt.Errorf("faculty record already exists")
+		}
+
+		if f.EmployeeID != "" && existing.EmployeeID == f.EmployeeID {
+			return fmt.Errorf("employee ID already in use")
+		}
+	}
+
+	s.faculties[f.ID] = f
+
+	return nil
 }

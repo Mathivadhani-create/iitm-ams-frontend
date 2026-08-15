@@ -1,4 +1,4 @@
-package handlers
+﻿package handlers
 
 import (
 	"encoding/json"
@@ -138,6 +138,9 @@ func (h *StudentHandler) GetGrades(w http.ResponseWriter, r *http.Request) {
 	}
 
 	grades := h.store.GetStudentGrades(st.ID)
+        if grades == nil {
+                grades = []*models.Registration{}
+        }
 
 	var totalPoints float64
 	var totalCredits int
@@ -159,7 +162,7 @@ func (h *StudentHandler) GetGrades(w http.ResponseWriter, r *http.Request) {
 		Data: map[string]interface{}{
 			"grades":        grades,
 			"cgpa":          gpa,
-			"total_credits": totalCredits,
+			"total_credits_earned": totalCredits,
 		},
 	})
 }
@@ -192,3 +195,6 @@ func (h *StudentHandler) MarkNotificationRead(w http.ResponseWriter, r *http.Req
 
 	respondJSON(w, http.StatusOK, models.ApiResponse{Success: true, Message: "Notification marked as read."})
 }
+
+
+

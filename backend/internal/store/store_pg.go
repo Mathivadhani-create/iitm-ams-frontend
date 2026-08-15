@@ -1,4 +1,4 @@
-package store
+﻿package store
 
 import (
 	"database/sql"
@@ -70,12 +70,24 @@ func (s *PGStore) SeedInitialData() error {
 			return fmt.Errorf("failed seeding faculty %s: %w", f.EmployeeID, err)
 		}
 	}
-
 	// Courses
 	courses := []*models.Course{
+		// Computer Science & Engineering
 		{ID: "30000000-0000-0000-0000-000000000001", CourseCode: "CS1010", CourseName: "Introduction to Programming", Description: "Fundamental principles of programming.", Credits: 4, Department: "Computer Science & Engineering", CreatedAt: now},
 		{ID: "30000000-0000-0000-0000-000000000002", CourseCode: "CS3100", CourseName: "Data Structures and Algorithms", Description: "Arrays, trees, graphs, and asymptotic runtime.", Credits: 4, Department: "Computer Science & Engineering", CreatedAt: now},
 		{ID: "30000000-0000-0000-0000-000000000003", CourseCode: "CS4200", CourseName: "Database Systems", Description: "Relational algebra, SQL, B-Trees, and transactions.", Credits: 4, Department: "Computer Science & Engineering", CreatedAt: now},
+
+		// Electrical Engineering
+		{ID: "30000000-0000-0000-0000-000000000004", CourseCode: "EE2100", CourseName: "Electrical Circuits", Description: "Fundamentals of electrical circuits and network analysis.", Credits: 4, Department: "Electrical Engineering", CreatedAt: now},
+		{ID: "30000000-0000-0000-0000-000000000005", CourseCode: "EE3100", CourseName: "Digital Electronics", Description: "Digital logic, combinational and sequential circuits.", Credits: 4, Department: "Electrical Engineering", CreatedAt: now},
+
+		// Mechanical Engineering
+		{ID: "30000000-0000-0000-0000-000000000006", CourseCode: "ME2100", CourseName: "Engineering Mechanics", Description: "Statics, dynamics, forces, and mechanical systems.", Credits: 4, Department: "Mechanical Engineering", CreatedAt: now},
+		{ID: "30000000-0000-0000-0000-000000000007", CourseCode: "ME3100", CourseName: "Thermodynamics", Description: "Thermodynamic principles and engineering applications.", Credits: 4, Department: "Mechanical Engineering", CreatedAt: now},
+
+		// Mathematics
+		{ID: "30000000-0000-0000-0000-000000000008", CourseCode: "MA1010", CourseName: "Engineering Mathematics I", Description: "Calculus, differential equations, and mathematical foundations.", Credits: 4, Department: "Mathematics", CreatedAt: now},
+		{ID: "30000000-0000-0000-0000-000000000009", CourseCode: "MA2010", CourseName: "Probability and Statistics", Description: "Probability theory, statistics, distributions, and inference.", Credits: 4, Department: "Mathematics", CreatedAt: now},
 	}
 
 	for _, c := range courses {
@@ -96,11 +108,89 @@ func (s *PGStore) SeedInitialData() error {
 	if _, err := s.db.Exec(semQuery, semID, "July - November 2026 (Monsoon)", "2026-2027", "2026-07-25", "2026-11-30", true, regClose); err != nil {
 		return fmt.Errorf("failed seeding semester: %w", err)
 	}
-
 	// Course Offerings
+	// FAC101 and FAC102 are used as the seeded faculty records.
+	// The catalog supports courses across multiple departments.
 	offerings := []*models.CourseOffering{
-		{ID: "50000000-0000-0000-0000-000000000001", CourseID: "30000000-0000-0000-0000-000000000002", FacultyID: "20000000-0000-0000-0000-000000000001", SemesterID: semID, Capacity: 60, CreatedAt: now},
-		{ID: "50000000-0000-0000-0000-000000000002", CourseID: "30000000-0000-0000-0000-000000000003", FacultyID: "20000000-0000-0000-0000-000000000002", SemesterID: semID, Capacity: 50, CreatedAt: now},
+		// Computer Science
+		{
+			ID:         "50000000-0000-0000-0000-000000000001",
+			CourseID:   "30000000-0000-0000-0000-000000000002", // CS3100
+			FacultyID:  "20000000-0000-0000-0000-000000000001",
+			SemesterID: semID,
+			Capacity:   60,
+			CreatedAt:  now,
+		},
+		{
+			ID:         "50000000-0000-0000-0000-000000000002",
+			CourseID:   "30000000-0000-0000-0000-000000000003", // CS4200
+			FacultyID:  "20000000-0000-0000-0000-000000000002",
+			SemesterID: semID,
+			Capacity:   50,
+			CreatedAt:  now,
+		},
+		{
+			ID:         "50000000-0000-0000-0000-000000000003",
+			CourseID:   "30000000-0000-0000-0000-000000000001", // CS1010
+			FacultyID:  "20000000-0000-0000-0000-000000000002",
+			SemesterID: semID,
+			Capacity:   60,
+			CreatedAt:  now,
+		},
+
+		// Electrical Engineering
+		{
+			ID:         "50000000-0000-0000-0000-000000000004",
+			CourseID:   "30000000-0000-0000-0000-000000000004", // EE2100
+			FacultyID:  "20000000-0000-0000-0000-000000000001",
+			SemesterID: semID,
+			Capacity:   60,
+			CreatedAt:  now,
+		},
+		{
+			ID:         "50000000-0000-0000-0000-000000000005",
+			CourseID:   "30000000-0000-0000-0000-000000000005", // EE3100
+			FacultyID:  "20000000-0000-0000-0000-000000000002",
+			SemesterID: semID,
+			Capacity:   50,
+			CreatedAt:  now,
+		},
+
+		// Mechanical Engineering
+		{
+			ID:         "50000000-0000-0000-0000-000000000006",
+			CourseID:   "30000000-0000-0000-0000-000000000006", // ME2100
+			FacultyID:  "20000000-0000-0000-0000-000000000001",
+			SemesterID: semID,
+			Capacity:   60,
+			CreatedAt:  now,
+		},
+		{
+			ID:         "50000000-0000-0000-0000-000000000007",
+			CourseID:   "30000000-0000-0000-0000-000000000007", // ME3100
+			FacultyID:  "20000000-0000-0000-0000-000000000002",
+			SemesterID: semID,
+			Capacity:   50,
+			CreatedAt:  now,
+		},
+
+		// Mathematics
+		{
+			ID:         "50000000-0000-0000-0000-000000000008",
+			CourseID:   "30000000-0000-0000-0000-000000000008", // MA1010
+			FacultyID:  "20000000-0000-0000-0000-000000000002",
+			SemesterID: semID,
+			Capacity:   60,
+			CreatedAt:  now,
+		},
+		{
+			ID:         "50000000-0000-0000-0000-000000000009",
+			CourseID:   "30000000-0000-0000-0000-000000000009", // MA2010
+			FacultyID:  "20000000-0000-0000-0000-000000000001",
+			SemesterID: semID,
+			Capacity:   50,
+			CreatedAt:  now,
+		},
 	}
 
 	for _, co := range offerings {
@@ -112,18 +202,75 @@ func (s *PGStore) SeedInitialData() error {
 		}
 	}
 
-	// Seed 1 Registration and Grade
-	regID := "60000000-0000-0000-0000-000000000001"
-	regQuery := `INSERT INTO registrations (id, student_id, course_offering_id, registered_at, status)
-		VALUES ($1, $2, $3, $4, $5)
-		ON CONFLICT (student_id, course_offering_id) DO NOTHING;`
-	s.db.Exec(regQuery, regID, "10000000-0000-0000-0000-000000000001", "50000000-0000-0000-0000-000000000001", now, models.StatusRegistered)
+	// Seed registrations and grades
+	registrations := []struct {
+		ID         string
+		StudentID  string
+		OfferingID string
+	}{
+		{
+			ID:         "60000000-0000-0000-0000-000000000001",
+			StudentID:  "10000000-0000-0000-0000-000000000001",
+			OfferingID: "50000000-0000-0000-0000-000000000001", // CS3100
+		},
+		{
+			ID:         "60000000-0000-0000-0000-000000000002",
+			StudentID:  "10000000-0000-0000-0000-000000000001",
+			OfferingID: "50000000-0000-0000-0000-000000000002", // CS4200
+		},
+		{
+			ID:         "60000000-0000-0000-0000-000000000003",
+			StudentID:  "10000000-0000-0000-0000-000000000002",
+			OfferingID: "50000000-0000-0000-0000-000000000002", // CS4200
+		},
+		{
+			ID:         "60000000-0000-0000-0000-000000000004",
+			StudentID:  "10000000-0000-0000-0000-000000000001",
+			OfferingID: "50000000-0000-0000-0000-000000000003", // CS1010
+		},
+		{
+			ID:         "60000000-0000-0000-0000-000000000005",
+			StudentID:  "10000000-0000-0000-0000-000000000002",
+			OfferingID: "50000000-0000-0000-0000-000000000003", // CS1010
+		},
+	}
 
-	grdQuery := `INSERT INTO grades (id, registration_id, grade, grade_point, uploaded_by, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
-		ON CONFLICT (registration_id) DO NOTHING;`
-	s.db.Exec(grdQuery, "70000000-0000-0000-0000-000000000001", regID, models.GradeAPlus, 10.0, "20000000-0000-0000-0000-000000000001", now, now)
+	regQuery := `INSERT INTO registrations
+(id, student_id, course_offering_id, registered_at, status)
+VALUES ($1, $2, $3, $4, $5)
+ON CONFLICT (student_id, course_offering_id) DO NOTHING;`
 
+	for _, r := range registrations {
+		if _, err := s.db.Exec(
+			regQuery,
+			r.ID,
+			r.StudentID,
+			r.OfferingID,
+			now,
+			models.StatusRegistered,
+		); err != nil {
+			return fmt.Errorf("failed seeding registration %s: %w", r.ID, err)
+		}
+	}
+
+	// Seed one existing grade for the first CS3100 registration
+	grdQuery := `INSERT INTO grades
+(id, registration_id, grade, grade_point, uploaded_by, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+ON CONFLICT (registration_id) DO NOTHING;`
+
+	if _, err := s.db.Exec(
+		grdQuery,
+		"70000000-0000-0000-0000-000000000001",
+		"60000000-0000-0000-0000-000000000001",
+		models.GradeAPlus,
+		10.0,
+		"20000000-0000-0000-0000-000000000001",
+		now,
+		now,
+	); err != nil {
+		return fmt.Errorf("failed seeding grade: %w", err)
+	}
 	// Seed Notification
 	notifQuery := `INSERT INTO notifications (id, user_id, title, message, type, read, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -704,19 +851,56 @@ func (s *PGStore) GetEnrolledStudentsForOffering(facultyID, offeringID string) (
 					grd.PublishedAt = &gPublishedAt.Time
 				}
 			}
-
 			item := map[string]interface{}{
 				"registration_id": regID,
-				"student_id":      studentID,
-				"student_name":    name,
-				"roll_number":     roll,
-				"department":      dept,
-				"program":         prog,
-				"registered_at":   regAt,
-				"grade":           grd,
+				"student": map[string]interface{}{
+					"id": studentID,
+					"user": map[string]interface{}{
+						"name": name,
+					},
+					"roll_number": roll,
+					"department":  dept,
+					"program":     prog,
+				},
+				"registered_at": regAt,
+				"grade":         grd,
 			}
 			result = append(result, item)
 		}
 	}
 	return result, nil
 }
+
+// CreateFaculty
+func (s *PGStore) CreateFaculty(f *models.Faculty) error {
+	if f.ID == "" {
+		f.ID = uuid.New().String()
+	}
+	f.CreatedAt = time.Now()
+
+	query := `INSERT INTO faculty
+(id, user_id, employee_id, department, designation, created_at)
+VALUES ($1, $2, $3, $4, $5, $6)`
+
+	_, err := s.db.Exec(
+		query,
+		f.ID,
+		f.UserID,
+		f.EmployeeID,
+		f.Department,
+		f.Designation,
+		f.CreatedAt,
+	)
+
+	if err != nil {
+		if strings.Contains(strings.ToLower(err.Error()), "duplicate") ||
+			strings.Contains(strings.ToLower(err.Error()), "unique") {
+			return fmt.Errorf("faculty record already exists")
+		}
+		return err
+	}
+
+	return nil
+}
+
+

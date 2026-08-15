@@ -1,4 +1,4 @@
-import {
+﻿import {
   User,
   Student,
   Faculty,
@@ -107,11 +107,20 @@ export const apiService = {
       headers: getAuthHeaders(),
     });
 
-    return handleResponse<{
-      user: User;
+    // Go backend returns the authenticated user directly
+    // inside data, not inside data.user.
+    const data = await handleResponse<User & {
+      studentId?: string;
+      facultyId?: string;
       student?: Student;
       faculty?: Faculty;
     }>(res);
+
+    return {
+      user: data,
+      student: data.student,
+      faculty: data.faculty,
+    };
   },
 
   resetSeedData: async () => {
@@ -178,20 +187,38 @@ export const apiService = {
       headers: getAuthHeaders(),
     });
 
-    return handleResponse<{
-      cgpa: number;
-      total_credits_earned: number;
-      grades: Array<{
-        registration_id: string;
-        course_code: string;
-        course_name: string;
-        credits: number;
-        semester_name: string;
-        grade: GradeLetter;
-        grade_point: number;
-        published_at: string;
-      }>;
-    }>(res);
+    const data = await handleResponse<any>(res);
+
+    return {
+      cgpa: Number(data?.cgpa ?? 0),
+      total_credits_earned: Number(
+        data?.total_credits_earned ?? data?.total_credits ?? 0
+      ),
+      grades: Array.isArray(data?.grades)
+        ? data.grades.map((r: any) => ({
+            registration_id: r?.id ?? r?.registration_id ?? '',
+            course_code: r?.course_offering?.course?.course_code ?? '-',
+            course_name: r?.course_offering?.course?.course_name ?? '-',
+            credits: Number(r?.course_offering?.course?.credits ?? 0),
+            semester_name: r?.course_offering?.semester?.name ?? '-',
+            academic_year:
+              r?.course_offering?.semester?.academic_year ?? '',
+            grade:
+              typeof r?.grade === 'object'
+                ? r.grade?.grade ?? ''
+                : r?.grade ?? '',
+            grade_point: Number(
+              typeof r?.grade === 'object'
+                ? r.grade?.grade_point ?? 0
+                : r?.grade_point ?? 0
+            ),
+            published_at:
+              typeof r?.grade === 'object'
+                ? r.grade?.published_at ?? null
+                : r?.published_at ?? null,
+          }))
+        : [],
+    };
   },
 
   getStudentNotifications: async () => {
@@ -239,10 +266,7 @@ export const apiService = {
       }
     );
 
-    return handleResponse<{
-      offering: CourseOffering;
-      students: EnrolledStudent[];
-    }>(res);
+    return handleResponse<({ offering?: CourseOffering; students?: EnrolledStudent[] } | EnrolledStudent[])>(res);
   },
 
   uploadGrade: async (
@@ -289,3 +313,7 @@ export const apiService = {
     return handleResponse<Notification[]>(res);
   },
 };
+
+
+
+

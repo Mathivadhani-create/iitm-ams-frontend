@@ -1,4 +1,4 @@
-import { Response } from 'express';
+﻿import { Response } from 'express';
 import { db } from '../db/database';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { emailService } from '../services/emailService';
@@ -82,15 +82,23 @@ export const uploadGrade = async (req: AuthenticatedRequest, res: Response) => {
   const { registration_id, grade } = req.body;
 
   if (!faculty) {
-    return res.status(404).json({ success: false, message: 'Faculty record not found.' });
+    return res.status(404).json({
+      success: false,
+      message: 'Faculty record not found.',
+    });
   }
 
   const offering = db.getCourseOfferingById(offeringId);
+
   if (!offering) {
-    return res.status(404).json({ success: false, message: 'Course offering not found.' });
+    return res.status(404).json({
+      success: false,
+      message: 'Course offering not found.',
+    });
   }
 
-  // BUSINESS RULE 3: Faculty assignment check
+  // BUSINESS RULE 3: Faculty can only upload grades
+  // for courses they are assigned to teach.
   if (offering.faculty_id !== faculty.id) {
     return res.status(403).json({
       success: false,
@@ -98,7 +106,28 @@ export const uploadGrade = async (req: AuthenticatedRequest, res: Response) => {
     });
   }
 
-  // BUSINESS RULE 9: Grade value validation
+  // Validate registration ID.
+  if (!registration_id) {
+    return res.status(400).json({
+      success: false,
+      message: 'registration_id is required.',
+    });
+  }
+
+  // Verify that the registration belongs to this course offering.
+  const students = db.getStudentsInOffering(offeringId);
+  const registration = students.find(
+    (student) => student.registration_id === registration_id
+  );
+
+  if (!registration) {
+    return res.status(404).json({
+      success: false,
+      message: 'Student registration not found for this course offering.',
+    });
+  }
+
+  // BUSINESS RULE 9: Grade value validation.
   if (!ALLOWED_GRADES.includes(grade)) {
     return res.status(422).json({
       success: false,
@@ -106,7 +135,11 @@ export const uploadGrade = async (req: AuthenticatedRequest, res: Response) => {
     });
   }
 
-  const updatedGrade = db.upsertGrade(registration_id, grade, faculty.id);
+  const updatedGrade = db.upsertGrade(
+    registration_id,
+    grade,
+    faculty.id
+  );
 
   return res.status(200).json({
     success: true,
@@ -122,9 +155,13 @@ export const updateGrade = async (req: AuthenticatedRequest, res: Response) => {
   const { grade } = req.body;
 
   if (!faculty) {
-    return res.status(404).json({ success: false, message: 'Faculty record not found.' });
+    return res.status(404).json({
+      success: false,
+      message: 'Faculty record not found.',
+    });
   }
 
+  // BUSINESS RULE 9: Grade value validation.
   if (!ALLOWED_GRADES.includes(grade)) {
     return res.status(422).json({
       success: false,
@@ -132,14 +169,17 @@ export const updateGrade = async (req: AuthenticatedRequest, res: Response) => {
     });
   }
 
-  // Find grade
+  // Find the grade and verify that the faculty owns
+  // the course offering associated with the registration.
   const allOfferings = db.getCourseOfferings();
+
   let registrationId: string | null = null;
   let offeringFacultyId: string | null = null;
 
   for (const offering of allOfferings) {
     const students = db.getStudentsInOffering(offering.id);
-    const target = students.find((s) => s.grade?.id === gradeId);
+    const target = students.find((student) => student.grade?.id === gradeId);
+
     if (target) {
       registrationId = target.registration_id;
       offeringFacultyId = offering.faculty_id;
@@ -147,14 +187,25 @@ export const updateGrade = async (req: AuthenticatedRequest, res: Response) => {
     }
   }
 
-  if (!registrationId || offeringFacultyId !== faculty.id) {
-    return res.status(403).json({
+  if (!registrationId) {
+    return res.status(404).json({
       success: false,
-      message: 'Grade record not found or you are not authorized to modify it.',
+      message: 'Grade record not found.',
     });
   }
 
-  const updatedGrade = db.upsertGrade(registrationId, grade, faculty.id);
+  if (offeringFacultyId !== faculty.id) {
+    return res.status(403).json({
+      success: false,
+      message: 'Forbidden: You are not authorized to modify this grade.',
+    });
+  }
+
+  const updatedGrade = db.upsertGrade(
+    registrationId,
+    grade,
+    faculty.id
+  );
 
   return res.status(200).json({
     success: true,
@@ -239,3 +290,5 @@ export const getFacultyNotifications = async (req: AuthenticatedRequest, res: Re
     data: notifications,
   });
 };
+
+

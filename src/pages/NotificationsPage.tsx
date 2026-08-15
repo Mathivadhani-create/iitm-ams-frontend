@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { Notification } from '../types';
@@ -14,10 +14,10 @@ export const NotificationsPage: React.FC = () => {
       setLoading(true);
       if (user?.role === 'student') {
         const notifs = await apiService.getStudentNotifications();
-        setNotifications(notifs);
+        setNotifications(Array.isArray(notifs) ? notifs : []);
       } else if (user?.role === 'faculty') {
         const notifs = await apiService.getFacultyNotifications();
-        setNotifications(notifs);
+        setNotifications(Array.isArray(notifs) ? notifs : []);
       }
     } catch (err) {
       console.error('Failed to load notifications:', err);
@@ -95,3 +95,4 @@ export const NotificationsPage: React.FC = () => {
     </div>
   );
 };
+

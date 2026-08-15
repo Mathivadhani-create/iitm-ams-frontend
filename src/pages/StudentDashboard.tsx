@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { StatCard } from '../components/StatCard';
@@ -36,9 +36,13 @@ export const StudentDashboard: React.FC = () => {
           apiService.getStudentGrades(),
           apiService.getStudentNotifications(),
         ]);
-        setRegistrations(regs.filter((r) => r.status === 'registered'));
-        setGradesData(grds);
-        setNotifications(notifs);
+        setRegistrations(Array.isArray(regs) ? regs.filter((r) => r.status === 'registered') : []);
+        setGradesData({
+          cgpa: Number(grds?.cgpa ?? 0),
+          total_credits_earned: Number(grds?.total_credits_earned ?? 0),
+          grades: Array.isArray(grds?.grades) ? grds.grades : [],
+        });
+        setNotifications(Array.isArray(notifs) ? notifs : []);
       } catch (err) {
         console.error('Failed to load student dashboard:', err);
       } finally {
@@ -46,7 +50,7 @@ export const StudentDashboard: React.FC = () => {
       }
     };
     fetchData();
-  }, []);
+  }, [student?.id]);
 
   const totalRegisteredCredits = registrations.reduce(
     (acc, r) => acc + (r.course_offering?.course?.credits || 0),
@@ -69,8 +73,12 @@ export const StudentDashboard: React.FC = () => {
             Welcome, {user?.name}
           </h1>
           <p className="text-xs sm:text-sm text-red-100 max-w-xl">
-            Roll No: <span className="font-mono font-bold text-yellow-300">{student?.roll_number}</span> •{' '}
-            {student?.department} ({student?.program}, Year {student?.year})
+            Roll No:{' '}
+            <span className="font-mono font-bold text-yellow-300">
+              {student?.roll_number || 'N/A'}
+            </span>
+            {' • '}
+            {student?.department || 'N/A'} ({student?.program || 'N/A'}, Year {student?.year || 'N/A'})
           </p>
         </div>
       </div>
@@ -79,7 +87,7 @@ export const StudentDashboard: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="Cumulative GPA"
-          value={gradesData.cgpa > 0 ? gradesData.cgpa.toFixed(2) : '9.50'}
+          value={gradesData.cgpa > 0 ? gradesData.cgpa.toFixed(2) : '0.00'}
           subtext="Scale: 10.0 • Based on published grades"
           icon={Award}
           badgeText="First Class"
@@ -211,7 +219,7 @@ export const StudentDashboard: React.FC = () => {
                         <td className="py-2.5 px-3 text-gray-600">{g.semester_name}</td>
                         <td className="py-2.5 px-3 text-gray-700">{g.credits}</td>
                         <td className="py-2.5 px-3">
-                          <GradeBadge grade={g.grade} />
+                          <GradeBadge grade={typeof g.grade === "object" ? g.grade.grade : g.grade} />
                         </td>
                         <td className="py-2.5 px-3 text-right font-bold text-gray-900">
                           {g.grade_point} / 10
@@ -271,3 +279,10 @@ export const StudentDashboard: React.FC = () => {
     </div>
   );
 };
+
+
+
+
+
+
+

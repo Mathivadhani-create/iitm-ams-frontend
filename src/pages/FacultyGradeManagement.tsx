@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
 import { CourseOffering, EnrolledStudent, GradeLetter } from '../types';
 import { GradeBadge } from '../components/GradeBadge';
@@ -25,6 +25,7 @@ export const FacultyGradeManagement: React.FC = () => {
   // Local state for draft grades map: { registration_id -> letter_grade }
   const [gradeInputs, setGradeInputs] = useState<Record<string, GradeLetter>>({});
   const [savingRegId, setSavingRegId] = useState<string | null>(null);
+  const [currentStudentIndex, setCurrentStudentIndex] = useState(0);
   const [isPublishing, setIsPublishing] = useState<boolean>(false);
 
   const [loadingOfferings, setLoadingOfferings] = useState(true);
@@ -63,12 +64,25 @@ export const FacultyGradeManagement: React.FC = () => {
       setMessage(null);
       setPublishResult(null);
       const data = await apiService.getEnrolledStudents(offeringId);
-      setOffering(data.offering);
-      setStudents(data.students);
+      const offeringData = Array.isArray(data) ? { id: offeringId } : data?.offering ?? null;
+      setOffering(offeringData);
+console.log("[FACULTY OFFERING] offeringData:", offeringData);
+console.log("[FACULTY OFFERING] selectedOfferingId:", selectedOfferingId);
+
+      const roster = Array.isArray(data) ? data : (Array.isArray(data?.students) ? data.students : []);
+
+console.log("[FACULTY DEBUG] ROSTER COUNT:", roster.length);
+console.log("[FACULTY DEBUG] FIRST STUDENT:", JSON.stringify(roster[0], null, 2));
+
+      console.log("[FACULTY ROSTER] API response:", data);
+      console.log("[FACULTY ROSTER] students:", JSON.stringify(roster, null, 2));
+
+      setStudents(roster);
+      setCurrentStudentIndex(0);
 
       // Pre-fill grade inputs with existing grades
       const initialMap: Record<string, GradeLetter> = {};
-      data.students.forEach((s) => {
+      roster.forEach((s) => {
         if (s.grade?.grade) {
           initialMap[s.registration_id] = s.grade.grade;
         } else {
@@ -100,19 +114,39 @@ export const FacultyGradeManagement: React.FC = () => {
     try {
       setSavingRegId(registrationId);
       setMessage(null);
-      await apiService.uploadGrade(selectedOfferingId, registrationId, selectedGrade);
-      setMessage({
-        type: 'success',
-        text: 'Draft grade saved successfully in database.',
-      });
+
+      await apiService.uploadGrade(
+        selectedOfferingId,
+        registrationId,
+        selectedGrade
+      );
+
       await loadRoster(selectedOfferingId);
+
+      const nextIndex = currentStudentIndex + 1;
+
+      if (nextIndex < students.length) {
+        setCurrentStudentIndex(nextIndex);
+
+        setMessage({
+          type: 'success',
+          text: 'Draft grade saved successfully. Moving to the next student.',
+        });
+      } else {
+        setMessage({
+          type: 'success',
+          text: 'Draft grade saved successfully. All students have been processed.',
+        });
+      }
     } catch (err: any) {
-      setMessage({ type: 'error', text: err.message || 'Failed to save grade.' });
+      setMessage({
+        type: 'error',
+        text: err.message || 'Failed to save grade.',
+      });
     } finally {
       setSavingRegId(null);
     }
   };
-
   const handlePublishAllGrades = async () => {
     if (!confirm(`Publish grades for all enrolled students in ${offering?.course?.course_code}? This will record official publication timestamps, create student notifications, and trigger email alerts.`)) {
       return;
@@ -244,12 +278,13 @@ export const FacultyGradeManagement: React.FC = () => {
           </div>
 
           <button
+            type="button"
             onClick={handlePublishAllGrades}
             disabled={isPublishing || students.length === 0}
-            className="px-4 py-2.5 bg-[#800000] text-white rounded-xl text-xs font-bold hover:bg-red-900 transition-colors shadow-sm flex items-center space-x-2 disabled:opacity-50 shrink-0"
+            className="px-5 py-3 bg-[#800000] text-white rounded-xl text-sm font-bold hover:bg-red-900 transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shrink-0 min-w-[220px]"
           >
             <Send className="w-4 h-4" />
-            <span>{isPublishing ? 'Publishing Grades...' : 'Publish Grades for Offering'}</span>
+            <span>{isPublishing ? 'Publishing Grades...' : 'Publish All Grades'}</span>
           </button>
         </div>
       )}
@@ -257,7 +292,16 @@ export const FacultyGradeManagement: React.FC = () => {
       {/* Roster Table */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-xs p-5 space-y-4">
         <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-          <h2 className="font-bold text-sm text-gray-900">Enrolled Student Roster & Grade Input</h2>
+          <div>
+  <h2 className="font-bold text-sm text-gray-900">
+    Enrolled Student Roster & Grade Input
+  </h2>
+  {students.length > 0 && (
+    <p className="text-[11px] text-gray-500 mt-1">
+      Student {currentStudentIndex + 1} of {students.length}
+    </p>
+  )}
+</div>
           <span className="text-xs text-gray-500 font-medium">
             Allowed Grades: A+, A, A-, B+, B, B-, C+, C, C-, D, F
           </span>
@@ -284,19 +328,23 @@ export const FacultyGradeManagement: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-gray-100 font-medium">
                 {students.map((s) => {
-                  const studentInfo = s.student;
-                  const userInfo = studentInfo.user;
-                  const currentGrade = s.grade;
-                  const isPublished = !!currentGrade?.published_at;
+                  const studentInfo = s as any;
+const currentGrade = (s.grade ?? null) as any;
+const isPublished = !!currentGrade?.published_at;
+
+const rollNumber = studentInfo.roll_number;
+const studentName = studentInfo.student_name;
+const program = studentInfo.program;
+const department = studentInfo.department;
 
                   return (
                     <tr key={s.registration_id} className="hover:bg-gray-50/80">
                       <td className="py-3 px-3 font-mono font-bold text-[#800000]">
-                        {studentInfo.roll_number}
+                        {rollNumber}
                       </td>
-                      <td className="py-3 px-3 text-gray-900 font-semibold">{userInfo?.name}</td>
+                      <td className="py-3 px-3 text-gray-900 font-semibold">{studentName}</td>
                       <td className="py-3 px-3 text-gray-600">
-                        {studentInfo.program} • {studentInfo.department}
+                        {program} / {department}
                       </td>
                       <td className="py-3 px-3">
                         {isPublished ? (
@@ -317,6 +365,7 @@ export const FacultyGradeManagement: React.FC = () => {
                       </td>
                       <td className="py-3 px-3">
                         <select
+                          id={`grade-select-${s.registration_id}`}
                           value={gradeInputs[s.registration_id] || 'A'}
                           onChange={(e) =>
                             handleGradeChange(s.registration_id, e.target.value as GradeLetter)
@@ -353,3 +402,29 @@ export const FacultyGradeManagement: React.FC = () => {
     </div>
   );
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

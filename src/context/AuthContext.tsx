@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+﻿import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, Student, Faculty } from '../types';
 import { apiService } from '../services/api';
 
@@ -28,6 +28,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const refreshUser = async () => {
     const storedToken = localStorage.getItem('iitm_ams_token');
+
     if (!storedToken) {
       setUser(null);
       setStudent(null);
@@ -39,10 +40,53 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       setLoading(true);
       setError(null);
+
       const res = await apiService.getCurrentUser();
+
       setUser(res.user);
-      setStudent(res.student || null);
-      setFaculty(res.faculty || null);
+
+      // /auth/me returns the authenticated user, while the
+      // student profile endpoint contains roll number, department,
+      // program and year required by the dashboard.
+      if (res.user.role === 'student') {
+        try {
+          const studentProfile = await apiService.getStudentProfile();
+
+          console.log('[AuthContext] Student profile loaded:', studentProfile);
+
+          setStudent(studentProfile);
+        } catch (profileError) {
+          console.warn(
+            '[AuthContext] Student profile loading failed:',
+            profileError
+          );
+
+          setStudent(res.student || null);
+        }
+
+        setFaculty(null);
+      } else if (res.user.role === 'faculty') {
+        try {
+          const facultyProfile = await apiService.getFacultyProfile();
+
+          console.log('[AuthContext] Faculty profile loaded:', facultyProfile);
+          console.log('[AuthContext] Faculty Employee ID:', facultyProfile?.employee_id);
+
+          setFaculty(facultyProfile);
+        } catch (profileError) {
+          console.warn(
+            '[AuthContext] Faculty profile loading failed:',
+            profileError
+          );
+
+          setFaculty(res.faculty || null);
+        }
+
+        setStudent(null);
+      } else {
+        setStudent(null);
+        setFaculty(null);
+      }
     } catch (err: any) {
       console.error('[AuthContext] Session verification failed:', err);
       logout();
@@ -57,15 +101,39 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const login = async (email: string, pass: string): Promise<User> => {
     setError(null);
+    setLoading(true);
+
     try {
-      const res = await apiService.login(email, pass);
+      const res = await apiService.login(email.trim(), pass);
+
+      // Store the real JWT immediately.
       localStorage.setItem('iitm_ams_token', res.token);
       setToken(res.token);
-      await refreshUser();
+
+      // Set authenticated user immediately so protected routes
+      // can render without waiting for a second state transition.
+      setUser(res.user);
+
+      // Load role-specific profile information.
+      try {
+        const currentUser = await apiService.getCurrentUser();
+
+        setUser(currentUser.user);
+        setStudent(currentUser.student || null);
+        setFaculty(currentUser.faculty || null);
+      } catch (profileError) {
+        console.warn(
+          '[AuthContext] Profile loading failed after successful login:',
+          profileError
+        );
+      }
+
       return res.user;
     } catch (err: any) {
       setError(err.message || 'Login failed');
       throw err;
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -124,3 +192,8 @@ export const useAuth = () => {
   }
   return context;
 };
+
+
+
+
+
