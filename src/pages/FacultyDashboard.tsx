@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { StatCard } from '../components/StatCard';
@@ -37,7 +37,7 @@ export const FacultyDashboard: React.FC = () => {
       <div className="bg-gradient-to-r from-[#800000] to-red-950 text-white rounded-2xl p-6 shadow-md relative overflow-hidden">
         <div className="relative z-10 space-y-2">
           <div className="inline-flex items-center space-x-2 px-3 py-1 bg-white/10 rounded-full text-xs font-medium text-yellow-300">
-            <span>Faculty Portal â€¢ Monsoon Semester 2026</span>
+            <span>Faculty Portal • Monsoon Semester 2026</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
             Welcome, {user?.name}
@@ -122,7 +122,7 @@ export const FacultyDashboard: React.FC = () => {
                     </div>
                     <p className="text-xs text-gray-600 leading-relaxed">{course?.description}</p>
                     <p className="text-[11px] text-gray-500">
-                      Semester: {co.semester?.name} â€¢ Enrolled: {co.enrolled_count}/{co.capacity} students
+                      Semester: {co.semester?.name} • Enrolled: {co.enrolled_count}/{co.capacity} students
                     </p>
                   </div>
 
